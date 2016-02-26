@@ -264,17 +264,18 @@ do
   LFILES="$LFILES $OUT"
   [ "$OUT" -nt "$i" ] && continue
   do_loudly $BUILD -c $i -o $OUT &
+  PENDING="$PENDING$! "
 
   # ratelimit to $CPUS many parallel jobs, detecting errors
 
   while true
   do
-    PENDING="$(echo $PENDING $(jobs -rp) | tr ' ' '\n' | sort -u)"
-    [ $(echo -n "$PENDING" | wc -l) -lt "$CPUS" ] && break;
+    [ $(echo -n "$PENDING" | tr ' ' '\n' | wc -l) -lt "$CPUS" ] && break;
 
-    wait $(echo "$PENDING" | head -n 1)
+    PID="${PENDING%% *}"
+    wait "$PID"
     DONE=$(($DONE+$?))
-    PENDING="$(echo "$PENDING" | tail -n +2)"
+    PENDING="${PENDING#$PID }"
   done
   [ $DONE -ne 0 ] && break
 done
